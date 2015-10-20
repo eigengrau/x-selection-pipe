@@ -27,8 +27,8 @@ parser.add_argument(
     'targets',
     nargs='*',
     action='list_choices',
-    list_choices=('primary', 'clipboard'),
-    default=('primary', 'clipboard'),
+    list_choices=('primary', 'secondary', 'clipboard'),
+    default=('primary', 'secondary', 'clipboard'),
     help="The set of selections to monitor."
 )
 
@@ -42,26 +42,36 @@ def main():
 
     args = parser.parse_args()
 
-    monitor_clipboard = 'clipboard' in args.targets
-    monitor_primary = 'primary' in args.targets
+    selection_atom = {
+        'primary': Gdk.SELECTION_PRIMARY,
+        'secondary': Gdk.SELECTION_SECONDARY,
+        'clipboard': Gdk.SELECTION_CLIPBOARD
+    }
 
-    if monitor_primary:
-        primary = Selection(Gdk.SELECTION_PRIMARY)
-        primary.add_action(print_for_selection)
+    selections = []
+    for target in args.targets:
 
-    if monitor_clipboard:
-        clipboard = Selection(Gdk.SELECTION_CLIPBOARD)
-        clipboard.add_action(print_for_selection)
+        atom = selection_atom[target]
+        selection = Selection(atom)
+        selection.add_action(print_for_selection)
+        selections.append(selection)
 
-    monitor_both = monitor_primary and monitor_clipboard
-    if monitor_both and args.sync_selections:
-        primary.add_action(clipboard.set)
-        clipboard.add_action(primary.set)
+    if args.sync_selections:
 
-    if monitor_primary:
-        primary.connect()
-    if monitor_clipboard:
-        clipboard.connect()
+        # Synchronization is achieved by connecting all selections in a cirular
+        # graph.
+        pairwise = zip(selections[:-1], selections[1:])
+        for (selection1, selection2) in pairwise:
+            selection1.add_action(selection2.set)
+            selection2.add_action(selection1.set)
+
+        # Tie up the circle.
+        first, last = selections[0], selections[-1]
+        last.add_action(first.set)
+        first.add_action(last.set)
+
+    for selection in selections:
+        selection.connect()
 
     # Work around bug 622084.
     signal.signal(signal.SIGINT, signal.SIG_DFL)
