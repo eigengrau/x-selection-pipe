@@ -1,4 +1,4 @@
-from threading import Lock
+from collections import deque
 
 import gi
 gi.require_version('Gtk', '3.0')
@@ -12,7 +12,7 @@ class Selection:
 
         self.selection = Gtk.Clipboard.get(selection)
         self.actions = []
-        self.lock = Lock()
+        self.ignore_once = deque()
         for action in actions:
             self.add_action(action)
 
@@ -26,32 +26,21 @@ class Selection:
 
     def on_change(self, *args):
 
+        text = self.selection.wait_for_text()
+
+        if not text:
+            return
+
         # Avoid recursing on change events infinitely in cases where we trigger
-        # an owner changes ourselves.
-        if self.acquire(blocking=False):
+        # an owner change ourselves.
+        if self.ignore_once and self.ignore_once[0] == text:
+            self.ignore_once.popleft()
+            return
 
-            text = self.selection.wait_for_text()
-            if text:
-                for action in self.actions:
-                    action(text)
-            self.release()
-
-        else:
-            # Since we’ve just inhibited the recursive event, we can lift the
-            # inhibition.
-            self.release()
+        for action in self.actions:
+            action(text)
 
     def set(self, text):
 
-        self.acquire()
+        self.ignore_once.append(text)
         self.selection.set_text(text, -1)
-
-    def acquire(self, *args, **kwargs):
-
-        result = self.lock.acquire(*args, **kwargs)
-        return result
-
-    def release(self, *args, **kwargs):
-
-        result = self.lock.release(*args, **kwargs)
-        return result
