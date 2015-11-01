@@ -60,7 +60,7 @@ class DefaultListAction (argparse.Action):
 
         super().__init__(*args, **kwargs)
 
-    def __call__(self, parser, namespace, values, option_string='fohiea'):
+    def __call__(self, parser, namespace, values, option_string=None):
 
         for value in values:
             if value not in self.list_choices:
