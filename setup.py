@@ -17,7 +17,7 @@ setup(
         'xselection.util'
     ],
     package_dir={'': 'src'},
-    install_requires=['pygobject >=3.16, <3.23'],
+    install_requires=['pygobject >=3.16, <3.25'],
     license="GPL3",
     entry_points={
         'console_scripts': [
