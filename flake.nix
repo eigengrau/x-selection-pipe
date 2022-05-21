@@ -17,11 +17,15 @@
           ];
         };
       in rec {
-        packages.x-selection-pipe = pkgs.x-selection-pipe;
-        defaultPackage = packages.x-selection-pipe;
-        defaultApp = {
-          type = "app";
-          program = "${packages.x-selection-pipe}/bin/xselection-pipe";
+        packages = rec {
+          default = x-selection-pipe;
+          x-selection-pipe = pkgs.x-selection-pipe;
+        };
+        apps = {
+          default = {
+            type = "app";
+            program = "${packages.x-selection-pipe}/bin/xselection-pipe";
+          };
         };
       }));
 }
